@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/limoges/weather"
+	"github.com/limoges/weather/providers"
 )
 
 func main() {
@@ -19,11 +20,11 @@ func main() {
 func mainWithError() error {
 
 	var (
-		lat       string
-		lon       string
-		token     string
-		err       error
-		providers []weather.Provider
+		lat   string
+		lon   string
+		token string
+		err   error
+		ps    []weather.Provider
 	)
 
 	if lat, err = strictEnv("LATITUDE"); err != nil {
@@ -37,32 +38,32 @@ func mainWithError() error {
 	if token, err = strictEnv("DARKSKY_TOKEN"); err != nil {
 		return err
 	} else {
-		providers = append(providers, weather.Darksky{Token: token})
+		ps = append(ps, providers.Darksky{Token: token})
 	}
 
 	if token, err = strictEnv("WUNDERGROUND_TOKEN"); err != nil {
 		return err
 	} else {
-		providers = append(providers, weather.Wunderground{Token: token})
+		ps = append(ps, providers.Wunderground{Token: token})
 	}
 
 	if token, err = strictEnv("OPENWEATHERMAP_TOKEN"); err != nil {
 		return err
 	} else {
-		providers = append(providers, weather.OpenWeatherMap{Token: token})
+		ps = append(ps, providers.OpenWeatherMap{Token: token})
 	}
 
 	if token, err = strictEnv("APIXU_TOKEN"); err != nil {
 		return err
 	} else {
-		providers = append(providers, weather.Apixu{Token: token})
+		ps = append(ps, providers.Apixu{Token: token})
 	}
 
-	if len(providers) < 1 {
-		return errors.New("no provider available")
+	if len(ps) < 1 {
+		return errors.New("no providers available")
 	}
 
-	redundant := weather.MultiProvider(providers)
+	redundant := providers.MultiProvider(ps)
 	t, err := redundant.Temperature(lat, lon)
 	if err != nil {
 		return err
