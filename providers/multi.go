@@ -1,22 +1,31 @@
 package providers
 
-import "github.com/limoges/weather"
+import (
+	"log"
 
-type MultiProvider []weather.Provider
+	"github.com/limoges/weather"
+)
+
+type MultiProvider struct {
+	Providers []weather.Provider
+	Logger    *log.Logger
+}
 
 func (r MultiProvider) Temperatures(lat, lon string) ([]weather.Temperature, error) {
 	// We'll use a channel to gather all the results and process them after.
-	ts := make(chan weather.Temperature, len(r))
-	es := make(chan error, len(r))
+	ts := make(chan weather.Temperature, len(r.Providers))
+	es := make(chan error, len(r.Providers))
 
 	// Collect the temperatures
-	for _, provider := range r {
+	for _, provider := range r.Providers {
 		go func(p weather.Provider) {
 			t, err := p.Temperature(lat, lon)
 			if err != nil {
+				log.Printf("%v: %v\n", p, err)
 				es <- err
 				return
 			}
+			log.Printf("%v: %v\n", p, t)
 			ts <- t
 		}(provider)
 	}
@@ -25,7 +34,7 @@ func (r MultiProvider) Temperatures(lat, lon string) ([]weather.Temperature, err
 	var values []weather.Temperature
 	var errors []error
 
-	for i := 0; i < len(r); i++ {
+	for i := 0; i < len(r.Providers); i++ {
 		select {
 		case t := <-ts:
 			values = append(values, t)

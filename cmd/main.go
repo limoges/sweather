@@ -2,7 +2,10 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"os"
 
 	"github.com/limoges/weather"
@@ -20,19 +23,35 @@ func main() {
 func mainWithError() error {
 
 	var (
-		lat   string
-		lon   string
-		token string
-		err   error
-		ps    []weather.Provider
+		lat     string
+		lon     string
+		token   string
+		err     error
+		ps      []weather.Provider
+		verbose bool
+		logger  *log.Logger
 	)
 
-	if lat, err = strictEnv("LATITUDE"); err != nil {
-		return err
+	flag.BoolVar(&verbose, "v", false, "print step by step information")
+	flag.StringVar(&lat, "lat", "", "latitude")
+	flag.StringVar(&lon, "lon", "", "latitude")
+	flag.Parse()
+
+	logger = log.New(ioutil.Discard, "weather", log.Lshortfile)
+	if verbose {
+		logger.SetOutput(os.Stdout)
 	}
 
-	if lon, err = strictEnv("LONGITUDE"); err != nil {
-		return err
+	if lat == "" {
+		if lat, err = strictEnv("LATITUDE"); err != nil {
+			return err
+		}
+	}
+
+	if lon == "" {
+		if lon, err = strictEnv("LONGITUDE"); err != nil {
+			return err
+		}
 	}
 
 	if token, err = strictEnv("DARKSKY_TOKEN"); err != nil {
@@ -63,7 +82,10 @@ func mainWithError() error {
 		return errors.New("no providers available")
 	}
 
-	redundant := providers.MultiProvider(ps)
+	redundant := providers.MultiProvider{
+		Providers: ps,
+		Logger:    logger,
+	}
 	t, err := redundant.Temperature(lat, lon)
 	if err != nil {
 		return err
